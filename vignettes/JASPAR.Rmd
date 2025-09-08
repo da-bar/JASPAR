@@ -1,0 +1,52 @@
+---
+title: "JASPAR"
+output: BiocStyle::html_document
+author:
+    name: Damir Baranasic
+    affiliation: Division of electronics, 
+bibliography: JASPAR.bib
+vignette: >
+  %\VignetteIndexEntry{JASPAR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Retrieveing data from JASPAR
+
+JASPAR (https://jaspar.elixir.no/) is an open-access database that has provided high-quality, manually curated, and non-redundant DNA binding profiles for transcription factors (TFs) as position frequency matrices (PFMs) for over 20 years. For this 11th release of the database, we expanded our CORE and UNVALIDATED collections with new PFMs and updated existing profiles. Specifically, we added 306 and 433 new binding profiles to the CORE (a 12% increase) and UNVALIDATED (a 60% increase) collections, respectively, and updated 13 profiles from the CORE collection. With the new collections of PFMs, we updated the TF binding site predictions in eight species and provided the corresponding genomic tracks. Moreover, we updated the profile clusters and familial TF binding sites accordingly. This release introduces a regulatory sequence simulation tool, inMOTIFin, enabling users to simulate regulatory sequences using JASPAR PFMs. To enrich the annotations linked to the TFs, JASPAR now provides scientific literature-based human TF target information derived from a large language model. Notably, this release features the addition of a new collection of deep learning BPnet models, providing a paradigm shift in modeling and characterizing TF-DNA interactions, driven by advances in artificial intelligence. JASPAR 2026 provides 1304 BPNet models trained on Homo sapiens ENCODE ChIP-seq datasets from 264 TFs. Interpretation of the BPnet revealed critical binding profiles that were curated and matched to JASPAR CORE PFMs for an easy overview of the binding patterns. Profiles from BPnet models associated with the same TF were clustered to provide a non-redundant summary of the binding properties of the TF, resulting in 266 primary motifs in the new Deep Learning collection. The 2026 release of JASPAR now offers the classical manually curated collections of TF binding profiles and state-of-the-art deep learning models. These collections lay a foundation for future endeavors in genomic research, serving the scientific community in uncovering the mechanisms of gene regulation.
+
+You can easily access data in JASPAR using the RSQLite package as shown:
+
+```{r setup}
+library(JASPAR)
+library(RSQLite)
+library(TFBSTools)
+
+JASPAR <- JASPAR()
+JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(JASPAR))
+siteList <- TFBSTools::getMatrixSet(JASPARConnect, 
+                                    list(tax_group = "vertebrates"))
+siteList
+dbDisconnect(JASPARConnect)
+
+
+```
+
+# Session Info
+
+Here is the output of `sessionInfo()` on the system on which this document was compiled:
+
+```{r session_info, echo=FALSE}
+sessionInfo()
+```
+
+# Bibliography
+
+

@@ -1,0 +1,4 @@
+The new release of JASPAR comes with a new syntax to construct the JASPAR2024
+class. The JASPAR2024 object can be constructed using the JASPAR2024()
+method, and the location of the sqlite file can be retrieved using the db()
+method.
