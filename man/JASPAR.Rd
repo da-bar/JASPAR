@@ -6,11 +6,11 @@
 \alias{JASPAR}
 \title{JASPAR object class}
 \usage{
-JASPAR(version = "JASPAR2024")
+JASPAR(version = "JASPAR2026")
 }
 \arguments{
 \item{version}{The version of JASPAR database which should be loaded. 
-Default is "JASPAR2024"}
+Default is "JASPAR2026"}
 }
 \value{
 JASPAR-class
@@ -33,7 +33,7 @@ of SQLite file.}
 library(JASPAR)
 library(RSQLite)
 
-JASPAR <- JASPAR(version = 'JASPAR2024')
+JASPAR <- JASPAR(version = 'JASPAR2026')
 JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(JASPAR))
 RSQLite::dbGetQuery(JASPARConnect, 'SELECT * FROM MATRIX LIMIT 5')
 dbDisconnect(JASPARConnect)
