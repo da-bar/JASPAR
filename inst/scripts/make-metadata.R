@@ -1,3 +1,29 @@
+meta2026 <- data.frame(
+  Title = "JASPAR2026",
+  Description = paste0("Data package for JASPAR2026, ",
+                       "a popular database of transcription",
+                       "factor motif profiles"),
+  BiocVersion = "3.15",
+  Genome = NA,
+  SourceType = "MySQL",
+  SourceUrl = "https://mencius.uio.no/JASPAR/JASPAR_metadata/2026/JASPAR2026.sqlite3",
+  SourceVersion = "Sep 09 2025",
+  Species = NA,
+  TaxonomyId = NA,
+  Coordinate_1_based = NA,
+  DataProvider = paste0("JASPAR is brought to you by a collaborative effort of",
+                        "several research labs and it is licensed under the",
+                        "Creative Commons Attribution 4.0 International License"),
+  Maintainer = "Damir Baranasic <damir.baranasic@lms.mrc.ac.uk>",
+  RDataClass = "JASPAR2026",
+  DispatchClass = "FilePath",
+  ResourceName = "JASPAR2026",
+  Location_Prefix = "https://ncmm.jaspar.uiocloud.no/",
+  RDataPath = "download/database/JASPAR2026.sqlite3",
+  Tags = "AnnotationData:FunctionalAnnotation:AnnotationHub"
+)
+
+
 meta2024 <- data.frame(
   Title = "JASPAR2024",
   Description = paste0("Data package for JASPAR2024, ",

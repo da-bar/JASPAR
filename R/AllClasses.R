@@ -7,7 +7,7 @@
 #' of SQLite file.
 #' @slot version The version of JASPAR database which is loaded
 #' @param version The version of JASPAR database which should be loaded. 
-#' Default is "JASPAR2024"
+#' Default is "JASPAR2026"
 #' @returns JASPAR-class
 #' @author Damir Baranasic
 #' @keywords classes
@@ -16,7 +16,7 @@
 #' library(JASPAR)
 #' library(RSQLite)
 #'
-#' JASPAR <- JASPAR(version = 'JASPAR2024')
+#' JASPAR <- JASPAR(version = 'JASPAR2026')
 #' JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(JASPAR))
 #' RSQLite::dbGetQuery(JASPARConnect, 'SELECT * FROM MATRIX LIMIT 5')
 #' dbDisconnect(JASPARConnect)
@@ -88,7 +88,7 @@ setMethod("initialize", "JASPAR",
 #' @rdname JASPAR
 #' @export
 
-JASPAR <- function(version = "JASPAR2024") {
+JASPAR <- function(version = "JASPAR2026") {
   new("JASPAR", version = version)
 }
 
