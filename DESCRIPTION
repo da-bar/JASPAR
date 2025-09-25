@@ -1,7 +1,7 @@
 Package: JASPAR
 Type: Package
 Title: Data package for JASPAR databases
-Version: 0.99.1
+Version: 0.99.2
 Authors@R: person(given = "Damir", family = "Baranasic", 
                   role = c("aut", "cre"),
                   email = "damir.baranasic@lms.mrc.ac.uk", 
