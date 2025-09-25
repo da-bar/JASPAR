@@ -161,7 +161,7 @@ setMethod("version", "JASPAR",
 #' @return A character vector of available releases 
 #' (e.g., \code{c("2024","2022","2020")}).
 #' 
-#' #' @examples
+#' @examples
 #' # List available JASPAR releases bundled with this package
 #' vers <- getAvailableJASPARVersions()
 #' vers
