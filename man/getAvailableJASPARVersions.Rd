@@ -13,6 +13,11 @@ contains \code{extdata/metadata.csv}. Defaults to \code{"JASPAR"}.}
 \value{
 A character vector of available releases 
 (e.g., \code{c("2024","2022","2020")}).
+
+#' @examples
+# List available JASPAR releases bundled with this package
+vers <- getAvailableJASPARVersions()
+vers
 }
 \description{
 Reads the package's \code{extdata/metadata.csv} and returns the unique
