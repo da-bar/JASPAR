@@ -10,7 +10,7 @@ version(object)
 \item{object}{JASPAR class object}
 }
 \value{
-Returns the version of the JASPAR satabase in the JASPAR object
+Returns the version of the JASPAR database in the JASPAR object
 }
 \description{
 The accessor function for retrieving the version of the
@@ -19,8 +19,8 @@ JASPAR database from the JASPAR object
 \examples{
 
 library(JASPAR)
-JASPAR <- JASPAR()
-version(JASPAR)
+jaspar <- JASPAR(version = 'JASPAR2024')
+version(jaspar)
 
 }
 \author{

@@ -1,52 +1,236 @@
 ---
-title: "JASPAR"
+title: "Retrieving JASPAR databases through AnnotationHub"
 output: BiocStyle::html_document
 author:
     name: Damir Baranasic
-    affiliation: Division of electronics, 
+    affiliation: Division of electronics,
 bibliography: JASPAR.bib
 vignette: >
-  %\VignetteIndexEntry{JASPAR}
+  %\VignetteIndexEntry{Retrieving JASPAR databases through AnnotationHub}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-# Retrieveing data from JASPAR
+# Introduction
 
-JASPAR (https://jaspar.elixir.no/) is an open-access database that has provided high-quality, manually curated, and non-redundant DNA binding profiles for transcription factors (TFs) as position frequency matrices (PFMs) for over 20 years. For this 11th release of the database, we expanded our CORE and UNVALIDATED collections with new PFMs and updated existing profiles. Specifically, we added 306 and 433 new binding profiles to the CORE (a 12% increase) and UNVALIDATED (a 60% increase) collections, respectively, and updated 13 profiles from the CORE collection. With the new collections of PFMs, we updated the TF binding site predictions in eight species and provided the corresponding genomic tracks. Moreover, we updated the profile clusters and familial TF binding sites accordingly. This release introduces a regulatory sequence simulation tool, inMOTIFin, enabling users to simulate regulatory sequences using JASPAR PFMs. To enrich the annotations linked to the TFs, JASPAR now provides scientific literature-based human TF target information derived from a large language model. Notably, this release features the addition of a new collection of deep learning BPnet models, providing a paradigm shift in modeling and characterizing TF-DNA interactions, driven by advances in artificial intelligence. JASPAR 2026 provides 1304 BPNet models trained on Homo sapiens ENCODE ChIP-seq datasets from 264 TFs. Interpretation of the BPnet revealed critical binding profiles that were curated and matched to JASPAR CORE PFMs for an easy overview of the binding patterns. Profiles from BPnet models associated with the same TF were clustered to provide a non-redundant summary of the binding properties of the TF, resulting in 266 primary motifs in the new Deep Learning collection. The 2026 release of JASPAR now offers the classical manually curated collections of TF binding profiles and state-of-the-art deep learning models. These collections lay a foundation for future endeavors in genomic research, serving the scientific community in uncovering the mechanisms of gene regulation.
+JASPAR (https://jaspar.elixir.no/) is an open-access database that has provided
+high-quality, manually curated, and non-redundant DNA binding profiles for
+transcription factors (TFs) as position frequency matrices (PFMs) for over 20
+years. For this 11th release of the database, we expanded
+our CORE and UNVALIDATED collections with new PFMs and updated existing
+profiles. Specifically, we added 306 and 433 new binding profiles to the CORE (a
+12% increase) and UNVALIDATED (a 60% increase) collections, respectively, and
+updated 13 profiles from the CORE collection. With the new collections of PFMs,
+we updated the TF binding site predictions in eight species and provided the
+corresponding genomic tracks. Moreover, we updated the profile clusters and
+familial TF binding sites accordingly. This release introduces a regulatory
+sequence simulation tool, inMOTIFin, enabling users to simulate regulatory
+sequences using JASPAR PFMs. To enrich the annotations linked to the TFs,
+JASPAR now provides scientific literature-based human TF target information
+derived from a large language model. Notably, this release features the
+addition of a new collection of deep learning BPnet models, providing a
+paradigm shift in modeling and characterizing TF-DNA interactions, driven by
+advances in artificial intelligence. JASPAR 2026 provides 1304 BPNet models
+trained on Homo sapiens ENCODE ChIP-seq datasets from 264 TFs. Interpretation of
+the BPnet revealed critical binding profiles that were curated and matched to
+JASPAR CORE PFMs for an easy overview of the binding patterns. Profiles from
+BPnet models associated with the same TF were clustered to provide a
+non-redundant summary of the binding properties of the TF, resulting in 266
+primary motifs in the new Deep Learning collection. The 2026 release of JASPAR
+now offers the classical manually curated collections of TF binding profiles and
+state-of-the-art deep learning models. These collections lay a foundation for
+future endeavors in genomic research, serving the scientific community in
+uncovering the mechanisms of gene regulation.
 
-You can easily access data in JASPAR using the RSQLite package as shown:
+The *JASPAR* package gives access to the JASPAR databases from R. It does not
+contain any data. The databases are SQLite files that are registered as
+resources in `r Biocpkg("AnnotationHub")`. The package finds the resource of the
+release you ask for, lets AnnotationHub download it once, and returns the path
+of the cached file. You can open this file with `r CRANpkg("RSQLite")` or use it
+with `r Biocpkg("TFBSTools")` [@Tan:2016]. The default release is JASPAR 2024
+[@Rauluseviciute:2024]. JASPAR 2022 [@10.1093/nar/gkab1113] can be retrieved as
+well.
 
-```{r setup}
+# Installation
+
+```{r install, eval = FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("JASPAR")
+```
+
+# JASPAR in AnnotationHub
+
+Start by connecting to AnnotationHub and searching it for JASPAR.
+
+```{r hub, message = FALSE}
+library(AnnotationHub)
 library(JASPAR)
+
+ah <- AnnotationHub()
+query(ah, "JASPAR")
+```
+
+The search also finds resources that only mention JASPAR in their title, such as
+genomic tracks. The JASPAR databases are the resources whose R data class is
+`JASPAR`. Each of them is one release, and the title is the version name. The
+accession is the identifier of the resource in AnnotationHub.
+
+```{r records}
+records <- ah[ah$rdataclass == "JASPAR"]
+data.frame(accession = names(records),
+           version = records$title,
+           added = records$rdatadateadded)
+```
+
+`getAvailableJASPARVersions()` returns the same version names, newest first. The
+package takes them from the AnnotationHub metadata. It does not contain a list
+of its own, so a release that is added to AnnotationHub, or whose record is
+corrected, can be retrieved without updating the package.
+
+```{r versions}
+getAvailableJASPARVersions(hub = ah)
+```
+
+A listed version can still fail to download when the location registered for it
+in AnnotationHub cannot be reached. The error then names the version and the
+accession, see [Troubleshooting](#troubleshooting).
+
+# Retrieving a database
+
+`JASPAR()` retrieves a database by its version. The default version is
+`JASPAR2024`. The first call of `AnnotationHub()` downloads the hub database
+(about 140 MB). Every later call takes a few seconds, so create the hub once, as
+above, and pass it with `hub = ah` when you retrieve several versions.
+
+```{r retrieve}
+jaspar <- JASPAR(version = "JASPAR2024", hub = ah)
+version(jaspar)
+```
+
+`db()` returns the path of the SQLite file in the AnnotationHub cache. The file
+is downloaded the first time and reused afterwards.
+
+```{r path}
+file.exists(db(jaspar))
+```
+
+This is the same file that AnnotationHub returns for the accession of the
+resource.
+
+```{r accession, message = FALSE}
+id <- names(records)[records$title == "JASPAR2024"]
+identical(unname(ah[[id]]), db(jaspar))
+```
+
+# Searching profiles with TFBSTools
+
+`getMatrixSet()` of `r Biocpkg("TFBSTools")` reads profiles from a JASPAR SQLite
+file. Open the file read-only, so that the cached copy cannot be changed by
+accident, and give the connection to `getMatrixSet()`. The options select the
+profiles. This query returns the CORE profiles of the budding yeast
+*Saccharomyces cerevisiae* (NCBI taxonomy identifier 4932).
+
+```{r tfbstools, message = FALSE}
 library(RSQLite)
 library(TFBSTools)
 
-JASPAR <- JASPAR()
-JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(JASPAR))
-siteList <- TFBSTools::getMatrixSet(JASPARConnect, 
-                                    list(tax_group = "vertebrates"))
-siteList
-dbDisconnect(JASPARConnect)
+con <- dbConnect(SQLite(), db(jaspar), flags = SQLITE_RO)
+pfms <- getMatrixSet(con, list(species = 4932, collection = "CORE"))
+dbDisconnect(con)
 
+length(pfms)
+head(sapply(pfms, name))
+```
 
+The result is a `PFMatrixList`. Each element is a position frequency matrix with
+the identifier and the name of the profile.
+
+```{r matrix}
+pfm <- pfms[[1]]
+c(ID = ID(pfm), name = name(pfm))
+Matrix(pfm)
+```
+
+`getMatrixSet()` also accepts the path of the file. It then opens and closes the
+connection itself, for reading and writing, so the read-only connection above is
+the safer way to open the cached file.
+
+```{r path-method}
+pfms <- getMatrixSet(db(jaspar), list(species = 4932, collection = "CORE"))
+length(pfms)
+```
+
+# Comparing releases
+
+Each release is a separate database, so you can compare them. The following code
+counts the profiles of JASPAR2022 and JASPAR2024 in each collection with SQL. A
+profile can have several versions, which are separate rows of the `MATRIX`
+table, so the code counts each base identifier once.
+
+```{r compare}
+count_profiles <- function(release) {
+    jaspar <- JASPAR(version = release, hub = ah)
+    con <- dbConnect(SQLite(), db(jaspar), flags = SQLITE_RO)
+    on.exit(dbDisconnect(con))
+    counts <- dbGetQuery(con,
+        "SELECT COLLECTION AS collection,
+                COUNT(DISTINCT BASE_ID) AS profiles
+         FROM MATRIX GROUP BY COLLECTION")
+    cbind(release = release, counts)
+}
+
+do.call(rbind, lapply(c("JASPAR2022", "JASPAR2024"), count_profiles))
+```
+
+# Working offline
+
+AnnotationHub needs an internet connection, also to create the hub object.
+Downloaded files stay in the cache. To use them without a connection, create the
+hub with `localHub = TRUE`. This hub contains only the resources that were
+downloaded before, so only those versions can be retrieved.
+
+```{r offline, eval = FALSE}
+ah_local <- AnnotationHub(localHub = TRUE)
+JASPAR(version = "JASPAR2024", hub = ah_local)
+```
+
+# Troubleshooting {#troubleshooting}
+
+If a database cannot be retrieved, the error names the version and the
+accession, and gives the reason reported by the server (for example
+`HTTP 404 Not Found`). A failed download is not stored in the cache, so there is
+nothing to clean up: try again later. You do not have to clear the cache either
+after the location of a resource has been corrected in AnnotationHub, the next
+call retrieves the file.
+
+AnnotationHub does not look into the files it caches. The package therefore
+checks that the file starts like an SQLite database and is not shorter than its
+header says, and downloads it once more if it is not, for example after an
+interrupted transfer. A hub created with
+`localHub = TRUE` cannot download, so with such a hub the error asks you to
+retrieve the version with an online hub. You can also ask for a fresh copy
+yourself.
+
+```{r force, eval = FALSE}
+AnnotationHub::cache(ah[id], force = TRUE)
 ```
 
 # Session Info
 
-Here is the output of `sessionInfo()` on the system on which this document was compiled:
+Here is the output of `sessionInfo()` on the system on which this document was
+compiled:
 
-```{r session_info, echo=FALSE}
+```{r session_info, echo = FALSE}
 sessionInfo()
 ```
 
-# Bibliography
-
-
+# References

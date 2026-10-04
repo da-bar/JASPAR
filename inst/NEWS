@@ -1,4 +1,30 @@
-The new release of JASPAR comes with a new syntax to construct the JASPAR2024
-class. The JASPAR2024 object can be constructed using the JASPAR2024()
-method, and the location of the sqlite file can be retrieved using the db()
-method.
+CHANGES IN VERSION 0.99.5
+-------------------------
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o JASPAR() retrieves the JASPAR SQLite databases through AnnotationHub.
+      Before, it downloaded them from the URL in inst/extdata/metadata.csv with
+      BiocFileCache. The AnnotationHub record is chosen by version from the hub
+      metadata. The package contains no accession numbers, so a release that
+      is added to AnnotationHub, or whose record is corrected, can be
+      retrieved without a new version of the package.
+    o The default version of JASPAR() changed from "JASPAR2026" to
+      "JASPAR2024", in the code, the help pages and the examples.
+    o getAvailableJASPARVersions() lists the versions that are registered in
+      AnnotationHub. Its argument 'package' is replaced by 'hub'.
+    o New argument 'hub' of JASPAR(): an AnnotationHub object to use, for
+      example AnnotationHub::AnnotationHub(localHub = TRUE) to work offline.
+    o If a database cannot be retrieved, the error names the version and the
+      AnnotationHub accession and gives the reason reported by AnnotationHub. A
+      cached file that is not an SQLite database or is cut short is downloaded
+      once more (not with a local hub, which cannot download).
+    o The package no longer depends on BiocFileCache directly. It imports
+      AnnotationHub.
+
+NEW FEATURES
+
+    o show() method for JASPAR objects.
+    o The vignette follows the AnnotationHub workflow: query the hub, retrieve
+      a version, and search it with TFBSTools.
+    o Unit tests.

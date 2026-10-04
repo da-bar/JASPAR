@@ -4,20 +4,54 @@
 \name{JASPAR-class}
 \alias{JASPAR-class}
 \alias{JASPAR}
+\alias{show,JASPAR-method}
 \title{JASPAR object class}
 \usage{
-JASPAR(version = "JASPAR2026")
+JASPAR(version = "JASPAR2024", hub = AnnotationHub())
+
+\S4method{show}{JASPAR}(object)
 }
 \arguments{
-\item{version}{The version of JASPAR database which should be loaded. 
-Default is "JASPAR2026"}
+\item{version}{The version of JASPAR database which should be loaded, for
+example \code{"JASPAR2024"} or \code{"JASPAR2022"}. See
+\code{\link{getAvailableJASPARVersions}} for the versions in AnnotationHub.
+Default is "JASPAR2024"}
+
+\item{hub}{An \code{AnnotationHub} object. Default is
+\code{AnnotationHub()}, which needs an internet connection. Its first call
+downloads the hub database (about 140 MB) and later calls take a few seconds,
+so create the object once if you retrieve several versions. To work
+offline, use \code{AnnotationHub::AnnotationHub(localHub = TRUE)}: the hub
+then contains only the databases that were downloaded before, and it cannot
+download a new copy of a damaged file.}
+
+\item{object}{JASPAR class object}
 }
 \value{
-JASPAR-class
+A \code{JASPAR} object. \code{db} gives the path of the SQLite file
+and \code{version} the version of the database.
 }
 \description{
 The JASPAR object class is a thin class for storing the
-path of JASPAR-style SQLite file.
+path of JASPAR-style SQLite file. The file is retrieved through
+\code{AnnotationHub} and kept in its cache, where it is reused until the
+provider publishes a newer file.
+}
+\details{
+The AnnotationHub record is chosen by comparing \code{version} with
+the titles of the JASPAR databases in the hub metadata (see
+\code{\link{getAvailableJASPARVersions}}). The package contains no
+accession numbers: a release that is registered in AnnotationHub, or whose
+record has been corrected, can be retrieved without updating the package.
+
+If the file cannot be retrieved, the error names the version and the
+AnnotationHub accession. With an online hub, a copy in the cache that is not
+an SQLite file, or that is shorter than its header says, for example after an
+interrupted transfer, is downloaded once more.
+
+Open the file read-only, for example with
+\code{RSQLite::dbConnect(RSQLite::SQLite(), db(x), flags =
+RSQLite::SQLITE_RO)}, so that the cached copy cannot be changed.
 }
 \section{Slots}{
 
@@ -33,10 +67,12 @@ of SQLite file.}
 library(JASPAR)
 library(RSQLite)
 
-JASPAR <- JASPAR(version = 'JASPAR2026')
-JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(JASPAR))
+jaspar <- JASPAR(version = 'JASPAR2024')
+jaspar
+JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(jaspar),
+                                    flags = RSQLite::SQLITE_RO)
 RSQLite::dbGetQuery(JASPARConnect, 'SELECT * FROM MATRIX LIMIT 5')
-dbDisconnect(JASPARConnect)
+RSQLite::dbDisconnect(JASPARConnect)
 
 }
 \author{

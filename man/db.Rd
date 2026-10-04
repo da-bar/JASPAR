@@ -16,7 +16,7 @@ db(object)
 \item{object}{JASPAR class object}
 }
 \value{
-Returns the location of the JASPAR.sqlite file
+Returns the path of the SQLite file in the AnnotationHub cache
 }
 \description{
 The accessor function for retrieving the location of the
@@ -25,8 +25,8 @@ database location slot from the JASPAR object
 \examples{
 
 library(JASPAR)
-JASPAR <- JASPAR()
-db(JASPAR)
+jaspar <- JASPAR(version = 'JASPAR2024')
+db(jaspar)
 
 }
 \author{

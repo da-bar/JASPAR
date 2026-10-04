@@ -2,24 +2,29 @@
 % Please edit documentation in R/AllClasses.R
 \name{getAvailableJASPARVersions}
 \alias{getAvailableJASPARVersions}
-\title{Available JASPAR releases in this package}
+\title{Available JASPAR releases in AnnotationHub}
 \usage{
-getAvailableJASPARVersions(package = "JASPAR")
+getAvailableJASPARVersions(hub = AnnotationHub())
 }
 \arguments{
-\item{package}{Character scalar, package name that 
-contains \code{extdata/metadata.csv}. Defaults to \code{"JASPAR"}.}
+\item{hub}{An \code{AnnotationHub} object. Default is
+\code{AnnotationHub()}, which needs an internet connection. With
+\code{AnnotationHub::AnnotationHub(localHub = TRUE)} only the databases that
+were downloaded before are listed.}
 }
 \value{
-A character vector of available releases 
-(e.g., \code{c("2024","2022","2020")}).
+A character vector of available versions, newest first
+(e.g., \code{c("JASPAR2026", "JASPAR2024", "JASPAR2022")}).
 }
 \description{
-Reads the package's \code{extdata/metadata.csv} and returns the unique
-release titles (e.g., "2020", "2022", "2024"), sorted so the newest is first.
+Queries AnnotationHub for the JASPAR databases that \code{\link{JASPAR}}
+can retrieve and returns their versions, newest first. The versions come
+from the hub metadata, so a newly registered release is listed without a
+package update. A listed version can still fail to download if the location
+registered in the hub cannot be reached.
 }
 \examples{
-# List available JASPAR releases bundled with this package
+# List the JASPAR releases that are registered in AnnotationHub
 vers <- getAvailableJASPARVersions()
 vers
 

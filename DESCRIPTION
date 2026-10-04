@@ -1,7 +1,8 @@
 Package: JASPAR
 Type: Package
+Encoding: UTF-8
 Title: Data package for JASPAR databases
-Version: 0.99.4
+Version: 0.99.5
 Authors@R: person(given = "Damir", family = "Baranasic", 
                   role = c("aut", "cre"),
                   email = "damir.baranasic@lms.mrc.ac.uk", 
@@ -40,7 +41,8 @@ Description: JASPAR (https://jaspar.elixir.no/) is an open-access database that
              foundation for future endeavors in genomic research, serving the
              scientific community in uncovering the mechanisms of gene 
              regulation.
-Depends: R (>= 4.5.0), methods, BiocFileCache, utils
+Depends: R (>= 4.5.0), methods
+Imports: AnnotationHub
 License: GPL-2
 URL: https://jaspar.elixir.no/
 NeedsCompilation: no
@@ -52,6 +54,8 @@ Suggests:
     rmarkdown,
     BiocStyle,
     RSQLite,
-    TFBSTools
+    TFBSTools,
+    testthat (>= 3.2.0)
 VignetteBuilder: knitr
+Config/testthat/edition: 3
 BugReports: https://github.com/da-bar/JASPAR

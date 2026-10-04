@@ -1,14 +1,41 @@
 #' JASPAR object class
 #'
 #' @description The JASPAR object class is a thin class for storing the
-#' path of JASPAR-style SQLite file.
+#' path of JASPAR-style SQLite file. The file is retrieved through
+#' \code{AnnotationHub} and kept in its cache, where it is reused until the
+#' provider publishes a newer file.
+#' @details The AnnotationHub record is chosen by comparing \code{version} with
+#' the titles of the JASPAR databases in the hub metadata (see
+#' \code{\link{getAvailableJASPARVersions}}). The package contains no
+#' accession numbers: a release that is registered in AnnotationHub, or whose
+#' record has been corrected, can be retrieved without updating the package.
+#'
+#' If the file cannot be retrieved, the error names the version and the
+#' AnnotationHub accession. With an online hub, a copy in the cache that is not
+#' an SQLite file, or that is shorter than its header says, for example after an
+#' interrupted transfer, is downloaded once more.
+#'
+#' Open the file read-only, for example with
+#' \code{RSQLite::dbConnect(RSQLite::SQLite(), db(x), flags =
+#' RSQLite::SQLITE_RO)}, so that the cached copy cannot be changed.
 #' @aliases JASPAR
 #' @slot db Object of class \code{"character"} a character string of the path
 #' of SQLite file.
 #' @slot version The version of JASPAR database which is loaded
-#' @param version The version of JASPAR database which should be loaded. 
-#' Default is "JASPAR2026"
-#' @returns JASPAR-class
+#' @param version The version of JASPAR database which should be loaded, for
+#' example \code{"JASPAR2024"} or \code{"JASPAR2022"}. See
+#' \code{\link{getAvailableJASPARVersions}} for the versions in AnnotationHub.
+#' Default is "JASPAR2024"
+#' @param hub An \code{AnnotationHub} object. Default is
+#' \code{AnnotationHub()}, which needs an internet connection. Its first call
+#' downloads the hub database (about 140 MB) and later calls take a few seconds,
+#' so create the object once if you retrieve several versions. To work
+#' offline, use \code{AnnotationHub::AnnotationHub(localHub = TRUE)}: the hub
+#' then contains only the databases that were downloaded before, and it cannot
+#' download a new copy of a damaged file.
+#' @param object JASPAR class object
+#' @returns A \code{JASPAR} object. \code{db} gives the path of the SQLite file
+#' and \code{version} the version of the database.
 #' @author Damir Baranasic
 #' @keywords classes
 #' @examples
@@ -16,71 +43,36 @@
 #' library(JASPAR)
 #' library(RSQLite)
 #'
-#' JASPAR <- JASPAR(version = 'JASPAR2026')
-#' JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(JASPAR))
+#' jaspar <- JASPAR(version = 'JASPAR2024')
+#' jaspar
+#' JASPARConnect <- RSQLite::dbConnect(RSQLite::SQLite(), db(jaspar),
+#'                                     flags = RSQLite::SQLITE_RO)
 #' RSQLite::dbGetQuery(JASPARConnect, 'SELECT * FROM MATRIX LIMIT 5')
-#' dbDisconnect(JASPARConnect)
+#' RSQLite::dbDisconnect(JASPARConnect)
 #'
 #' @rdname JASPAR
 #' @import methods
-#' @importFrom utils read.csv
-#' @import BiocFileCache
+#' @importFrom AnnotationHub AnnotationHub cache isLocalHub
 #' @exportClass JASPAR
 
 setClass("JASPAR", slots = c(db = "character", version = "character")
          )
 
 setMethod("initialize", "JASPAR",
-          function(.Object, package = "JASPAR", version = "JASPAR2024") {
+          function(.Object, version = "JASPAR2024", hub = AnnotationHub()) {
 
-            metaData <- system.file("extdata", "metadata.csv", package=package)
-            if (!file.exists(metaData)) {
-              stop("metadata.csv not found in the specified package.")
+            if (!is.character(version) || length(version) != 1L ||
+                is.na(version)) {
+              stop("'version' must be a single character string, ",
+                   "for example \"JASPAR2024\".", call. = FALSE)
             }
+            hub <- .getHub(hub)
 
-            metaDataDF <- read.csv(metaData, stringsAsFactors = FALSE)
+            # choose the record by version from the hub metadata
+            local <- isTRUE(isLocalHub(hub))
+            id <- .selectJASPARRecord(.jasparRecords(hub), version, local)
 
-            # sanity checks
-            reqCols <- c("Title", "SourceUrl")
-            missingCols <- setdiff(reqCols, colnames(metaDataDF))
-            if (length(missingCols)) {
-               stop("Required column(s) missing in metadata.csv: ",
-                    paste(missingCols, collapse = ", "))
-            }
-
-            all_versions <- unique(metaDataDF$Title)
-            
-            # validate requested version against the one copy of metadata we 
-            # already read
-            if (!version %in% all_versions) {
-              stop(
-                "Requested JASPAR version '", version, "' is ", 
-                "not available in this package. ",
-                "Call getAvailableJASPARVersions() to see available versions."
-              )
-            }
-
-            # filter metadata to the chosen version (one or more rows)
-            sub <- metaDataDF[metaDataDF$Title == version, , drop = FALSE]
-            if (!nrow(sub)) {
-              stop("No metadata rows found for version '", version, "'.")
-            } else if (nrow(sub) != 1) {
-              stop("Please define only one version of JASPAR.")
-            }
-
-            if (!"SourceUrl" %in% colnames(sub)) {
-              stop("SourceUrl column not found in metadata.csv.")
-            }
-
-            url <- sub$SourceUrl
-            files <- bfcrpath(BiocFileCache(), url)
-
-            if (length(files) == 0) {
-              stop("No files found based on SourceUrl from metadata.csv.")
-            }
-
-            # This package should have only one file
-            .Object@db <- files[1]
+            .Object@db <- .retrieveJASPAR(hub, id, version, local)
             .Object@version <- version
             return(.Object)
           })
@@ -88,9 +80,19 @@ setMethod("initialize", "JASPAR",
 #' @rdname JASPAR
 #' @export
 
-JASPAR <- function(version = "JASPAR2026") {
-  new("JASPAR", version = version)
+JASPAR <- function(version = "JASPAR2024", hub = AnnotationHub()) {
+  new("JASPAR", version = version, hub = hub)
 }
+
+#' @rdname JASPAR
+#' @export
+
+setMethod("show", "JASPAR",
+          function(object) {
+            cat("class: JASPAR\n")
+            cat("version: ", object@version, "\n", sep = "")
+            cat("db: ", object@db, "\n", sep = "")
+          })
 
 #' @name db
 #'
@@ -99,13 +101,13 @@ JASPAR <- function(version = "JASPAR2026") {
 #' database location slot from the JASPAR object
 #' @author Damir Baranasic
 #' @param object JASPAR class object
-#' @returns Returns the location of the JASPAR.sqlite file
+#' @returns Returns the path of the SQLite file in the AnnotationHub cache
 #' @keywords function
 #' @examples
 #'
 #' library(JASPAR)
-#' JASPAR <- JASPAR()
-#' db(JASPAR)
+#' jaspar <- JASPAR(version = 'JASPAR2024')
+#' db(jaspar)
 #'
 #' @import methods
 #' @export
@@ -128,13 +130,13 @@ setMethod("db", "JASPAR",
 #' JASPAR database from the JASPAR object
 #' @author Damir Baranasic
 #' @param object JASPAR class object
-#' @returns Returns the version of the JASPAR satabase in the JASPAR object
+#' @returns Returns the version of the JASPAR database in the JASPAR object
 #' @keywords function
 #' @examples
 #'
 #' library(JASPAR)
-#' JASPAR <- JASPAR()
-#' version(JASPAR)
+#' jaspar <- JASPAR(version = 'JASPAR2024')
+#' version(jaspar)
 #'
 #' @import methods
 #' @export
@@ -150,40 +152,30 @@ setMethod("version", "JASPAR",
             object@version
           })
 
-#' Available JASPAR releases in this package
+#' Available JASPAR releases in AnnotationHub
 #'
-#' Reads the package's \code{extdata/metadata.csv} and returns the unique
-#' release titles (e.g., "2020", "2022", "2024"), sorted so the newest is first.
+#' Queries AnnotationHub for the JASPAR databases that \code{\link{JASPAR}}
+#' can retrieve and returns their versions, newest first. The versions come
+#' from the hub metadata, so a newly registered release is listed without a
+#' package update. A listed version can still fail to download if the location
+#' registered in the hub cannot be reached.
 #'
-#' @param package Character scalar, package name that 
-#' contains \code{extdata/metadata.csv}. Defaults to \code{"JASPAR"}.
+#' @param hub An \code{AnnotationHub} object. Default is
+#' \code{AnnotationHub()}, which needs an internet connection. With
+#' \code{AnnotationHub::AnnotationHub(localHub = TRUE)} only the databases that
+#' were downloaded before are listed.
 #'
-#' @return A character vector of available releases 
-#' (e.g., \code{c("2024","2022","2020")}).
-#' 
+#' @return A character vector of available versions, newest first
+#' (e.g., \code{c("JASPAR2026", "JASPAR2024", "JASPAR2022")}).
+#'
 #' @examples
-#' # List available JASPAR releases bundled with this package
+#' # List the JASPAR releases that are registered in AnnotationHub
 #' vers <- getAvailableJASPARVersions()
 #' vers
-#' 
+#'
 #' @export
-#' @importFrom utils read.csv
 
-getAvailableJASPARVersions <- function(package = "JASPAR") {
-  metaPath <- system.file("extdata", "metadata.csv", package = package)
-  if (!file.exists(metaPath)) 
-    stop("metadata.csv not found in package '", package, "'.")
-  df <- utils::read.csv(metaPath, stringsAsFactors = FALSE)
-  if (!"Title" %in% colnames(df)) 
-    stop("Title column not foundin metadata.csv.")
-
-  vers <- unique(df$Title)
-  # try to sort by numeric year (desc). 
-  # If non-numeric, fallback to desc lexicographic
-  yrs <- suppressWarnings(as.integer(gsub("\\D", "", vers)))
-  if (all(!is.na(yrs))) {
-    vers[order(yrs, decreasing = TRUE)]
-  } else {
-    sort(vers, decreasing = TRUE)
-  }
+getAvailableJASPARVersions <- function(hub = AnnotationHub()) {
+  hub <- .getHub(hub)
+  .sortVersions(.jasparRecords(hub)$title)
 }
